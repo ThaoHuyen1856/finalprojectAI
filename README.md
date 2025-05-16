@@ -67,92 +67,110 @@ class WelcomeScreen(tk.Frame):
 
 
 # Lớp chính điều khiển giao diện và các thao tác xử lý (class FoodGUI)
-class FoodGUI:
-# Hàm khởi tạo giao diện
-    def __init__(self, root):
-        self.root = root
-        self.root.title("HỆ THỐNG TÍNH TIỀN CANTEEN")
+class FoodGUI(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
         self.cart = {}
         self.freeze = False
-        self.cap = None
         self.last_frame = None
-
-
-        # === CHỌN WEBCAM ===
+        self.cap = None
+        self.fullscreen = False
+        self.music_on = True
         self.selected_cam = tk.IntVar(value=0)
-        cam_frame = tk.Frame(self.root)
-        cam_frame.grid(row=0, column=0, columnspan=2, sticky="w", pady=5)
 
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
+        bg_img = smart_background("pict/bg.png", screen_w, screen_h)
+        self.bg_photo = ImageTk.PhotoImage(bg_img)
+        tk.Label(self, image=self.bg_photo).place(x=0, y=0, relwidth=1, relheight=1)
 
-        tk.Label(cam_frame, text="Chọn webcam:").pack(side=tk.LEFT)
-        self.cam_menu = tk.OptionMenu(cam_frame, self.selected_cam, *self.detect_cameras(), command=self.set_camera)
-        self.cam_menu.pack(side=tk.LEFT)
+        self.cam_menu = ttk.Combobox(self, values=self.detect_cameras(),
+                                     textvariable=self.selected_cam, width=5)
+        self.cam_menu.place(x=10, y=10)
+        self.cam_menu.bind("<<ComboboxSelected>>", lambda e: self.set_camera(self.selected_cam.get()))
 
+        self.frame_label = tk.Label(self, bg="black")
+        self.frame_label.place(relx=0.05, rely=0.35, relwidth=0.4, relheight=0.5)
 
-        # === KHUNG CAMERA ===
-        self.frame_label = tk.Label(self.root)
-        self.frame_label.grid(row=1, column=0, rowspan=10)
+        self.bill_box = tk.Text(self, font=("Arial", 12), bg="white", fg="black")
+        self.bill_box.place(relx=0.5, rely=0.35, relwidth=0.4, relheight=0.5)
 
+        self.total_label = tk.Label(self, text="TOTAL COST: 0 VND", bg="orange",
+                                    fg="white", font=("Arial", 14, "bold"))
+        self.total_label.place(relx=0.5, rely=0.82, relwidth=0.4, height=40)
 
-        # === HÓA ĐƠN ===
-        tk.Label(self.root, text="Hóa đơn", font=("Arial", 14)).grid(row=1, column=1)
-        self.bill_box = tk.Text(self.root, width=40, height=20)
-        self.bill_box.grid(row=2, column=1, rowspan=6)
+        # ==== Các nút với âm thanh ====
+        btn_y = 0.88
+        tk.Button(self, text="SCAN", font=("Arial", 10, "bold"),
+                  command=lambda: [play_click(), self.detect()])\
+            .place(relx=0.5, rely=btn_y, width=80)
 
+        tk.Button(self, text="NEXT", font=("Arial", 10, "bold"),
+                  command=lambda: [play_click(), self.resume_camera()])\
+            .place(relx=0.61, rely=btn_y, width=80)
 
-        # === NÚT BẤM ===
-        btn_frame = tk.Frame(self.root)
-        btn_frame.grid(row=8, column=1, pady=5)
+        tk.Button(self, text="DELETE MEAL", font=("Arial", 10, "bold"),
+                  command=lambda: [play_click(), self.clear_cart()])\
+            .place(relx=0.72, rely=btn_y, width=110)
 
+        tk.Button(self, text="HOME", font=("Arial", 10, "bold"), bg="red", fg="white",
+                  command=lambda: [play_click(), self.go_home()])\
+            .place(relx=0.9, rely=0.05, width=100)
 
-        tk.Button(btn_frame, text=" Quét món ăn", command=self.detect).pack(side=tk.LEFT, padx=5)
-        tk.Button(btn_frame, text=" Tiếp", command=self.resume_camera).pack(side=tk.LEFT, padx=5)
-        tk.Button(self.root, text=" Xóa giỏ hàng", command=self.clear_cart).grid(row=9, column=1)
+        tk.Button(self, text="MUSIC", font=("Arial", 10, "bold"), bg="blue", fg="white",
+                  command=lambda: [play_click(), self.toggle_music()])\
+            .place(relx=0.78, rely=0.05, width=100)
 
-
-        self.total_label = tk.Label(self.root, text="Tổng tiền: 0 VND", font=("Arial", 12))
-        self.total_label.grid(row=10, column=1, pady=10)
-
-
-        self.set_camera(self.selected_cam.get())
+        self.root_bindings()
         self.update_frame()
 
-# Hàm phát hiện webcam
-    def detect_cameras(self, max_devices=5):
-        available = []
-        for i in range(max_devices):
-            cap = cv2.VideoCapture(i)
-            if cap.isOpened():
-                available.append(i)
-                cap.release()
-        return available if available else [0]
+    def toggle_music(self):
+        if self.music_on:
+            pygame.mixer.music.pause()
+        else:
+            pygame.mixer.music.unpause()
+        self.music_on = not self.music_on
 
-# Hàm thiết lập camera
+    def on_show(self):
+        self.cart.clear()
+        self.freeze = False
+        self.set_camera(self.selected_cam.get())
+        self.update_bill()
+
+    def root_bindings(self):
+        self.bind_all("<F11>", self.toggle_fullscreen)
+        self.bind_all("<Escape>", lambda e: self.controller.destroy())
+        self.bind_all("<space>", lambda e: self.detect())
+
+    def detect_cameras(self, max_devices=5):
+        return [i for i in range(max_devices) if cv2.VideoCapture(i).isOpened()] or [0]
+
     def set_camera(self, cam_index):
         if self.cap:
             self.cap.release()
         self.cap = cv2.VideoCapture(int(cam_index))
 
-# Hàm cập nhật hình ảnh liên tục
+    def toggle_fullscreen(self, event=None):
+        self.fullscreen = not self.controller.attributes("-fullscreen", self.fullscreen)
+
     def update_frame(self):
         if not self.freeze and self.cap:
             ret, frame = self.cap.read()
             if ret:
                 self.last_frame = frame.copy()
-                img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                img_pil = Image.fromarray(img_rgb)
-                imgtk = ImageTk.PhotoImage(image=img_pil)
-                self.frame_label.imgtk = imgtk
-                self.frame_label.configure(image=imgtk)
-        self.root.after(20, self.update_frame)
+                frame = cv2.resize(frame, (640, 480))
+                img = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
+                self.frame_label.configure(image=img)
+                self.frame_label.imgtk = img
+        self.after(20, self.update_frame)
 
-# Hàm nhận diện món ăn
     def detect(self):
+        if self.last_frame is None: return
         self.freeze = True
         frame = self.last_frame.copy()
         crops = detect_and_crop_food(frame)
-        annotated_frame = frame.copy()
-
+        annotated = frame.copy()
 
         for crop, yolo_conf, yolo_label in crops:
             cnn_label, cnn_conf = predict_food(crop, cnn_model, food_labels)
@@ -160,44 +178,64 @@ class FoodGUI:
             if label != "Unknown":
                 self.cart[label] = self.cart.get(label, 0) + 1
 
-
         results = yolo_model(frame, conf=0.6)[0]
         for box, cls_id in zip(results.boxes.xyxy.cpu().numpy(), results.boxes.cls.cpu().numpy().astype(int)):
             x1, y1, x2, y2 = map(int, box)
             label = food_labels[cls_id]
-            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0,255,0), 2)
-            cv2.putText(annotated_frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 2)
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(annotated, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-
-        img_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
-        img_pil = Image.fromarray(img_rgb)
-        imgtk = ImageTk.PhotoImage(image=img_pil)
-        self.frame_label.imgtk = imgtk
-        self.frame_label.configure(image=imgtk)
-
-
+        show = ImageTk.PhotoImage(Image.fromarray(cv2.cvtColor(cv2.resize(annotated, (640, 480)), cv2.COLOR_BGR2RGB)))
+        self.frame_label.configure(image=show)
+        self.frame_label.imgtk = show
         self.update_bill()
 
-# Hàm tiếp tục camera
     def resume_camera(self):
         self.freeze = False
 
-# Hàm cập nhật hóa đơn(hiện thị món, tính tổng tiền)
+    def clear_cart(self):
+        self.cart.clear()
+        self.freeze = False
+        self.update_bill()
+
     def update_bill(self):
         self.bill_box.delete("1.0", tk.END)
         total = 0
         for item, qty in self.cart.items():
             price = prices.get(item, 0)
-            line_total = price * qty
-            self.bill_box.insert(tk.END, f"{item} x{qty} = {line_total:,} VND\n")
-            total += line_total
-        self.total_label.config(text=f"Tổng tiền: {total:,} VND")
+            self.bill_box.insert(tk.END, f"{item} x{qty} = {price*qty:,} VND\n")
+            total += price * qty
+        self.total_label.config(text=f"TOTAL COST: {total:,} VND")
 
-# Hàm xóa giỏ hàng, tiếp tục tính tiền món ăn khác
-    def clear_cart(self):
-        self.cart = {}
-        self.update_bill()
-        self.freeze = False
+    def go_home(self):
+        if self.cap:
+            self.cap.release()
+        self.controller.show_frame("WelcomeScreen")
+
+# Lớp quản lí và chuyển đổi các frame (class App(tk,Tk):)
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Smart Canteen")
+        self.geometry("1366x768")
+        self.frames = {}
+
+        container = tk.Frame(self)
+        container.pack(fill="both", expand=True)
+
+        for FrameClass in (WelcomeScreen, FoodGUI):
+            name = FrameClass.__name__
+            frame = FrameClass(container, self)
+            self.frames[name] = frame
+            frame.place(x=0, y=0, relwidth=1, relheight=1)
+
+        self.show_frame("WelcomeScreen")
+
+    def show_frame(self, name):
+        frame = self.frames[name]
+        frame.tkraise()
+        if hasattr(frame, "on_show"):
+            frame.on_show()
 
 # Hàm khởi tạo chạy chương trình (Tạo cửa sổ chính và khởi động GUI)
 if __name__ == "__main__":
