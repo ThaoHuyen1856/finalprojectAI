@@ -1,7 +1,12 @@
 # Khai báo thư viện
 import tkinter as tk
-from PIL import Image, ImageTk
+from tkinter import ttk
+from PIL import Image, ImageTk, ImageOps
 import cv2
+import threading
+import pygame
+from playsound import playsound
+from main2 import yolo_model, cnn_model, food_labels, detect_and_crop_food, predict_food
 
 # Load mô hình nhận diện sản phẩm (được tổng hợp trong file main2.py, bao gồm các file .h5 và .pt (tự huấn luyện dựa trên file ảnh thu thập(dataset) để detect và crop sản phẩm))
 from main2 import yolo_model, cnn_model, food_labels, detect_and_crop_food, predict_food
