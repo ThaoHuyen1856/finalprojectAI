@@ -6,6 +6,9 @@ import cv2
 # Load mô hình nhận diện sản phẩm (được tổng hợp trong file main2.py, bao gồm các file .h5 và .pt (tự huấn luyện dựa trên file ảnh thu thập(dataset) để detect và crop sản phẩm))
 from main2 import yolo_model, cnn_model, food_labels, detect_and_crop_food, predict_food
 
+# Mô hình detect và drop + dataset 
+https://drive.google.com/file/d/1jpeuNHOTjRNuLJNSLxSF-jwale0tXIxo/view?usp=sharing    
+
 # Danh sách nhãn và giá của các loại sản phẩm
 prices = {
     'ca_hu_kho': 35000, 'canh_bi_do': 40000, 'canh_bi_xanh': 30000, 'canh_cai': 20000,
