@@ -1,4 +1,3 @@
-# finalprojectAI
 # Khai báo thư viện
 import tkinter as tk
 from PIL import Image, ImageTk
