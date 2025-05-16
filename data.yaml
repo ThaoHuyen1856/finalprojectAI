@@ -1,0 +1,5 @@
+path: khay_com
+train: images
+val: images
+nc: 23
+names: ['ca_hu_kho', 'canh_bi_do', 'canh_bi_xanh', 'canh_cai', 'canh_chua', 'canh_khoai_mon', 'cha', 'com', 'dau_hu_sot_ca', 'dua_leo', 'ga_chien', 'ga_kho', 'lap_xuong', 'mam_nem', 'nuoc_mam', 'rau', 'rau_muong_xao', 'thit_kho', 'thit_kho_trung', 'tom_kho', 'trung-chien', 'unknown', 'xi_dau']
