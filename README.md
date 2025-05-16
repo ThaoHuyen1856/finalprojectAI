@@ -16,6 +16,7 @@ from main2 import yolo_model, cnn_model, food_labels, detect_and_crop_food, pred
 
 # File ảnh giao diện và âm thanh 
 # https://drive.google.com/drive/folders/1KUu3Y0TFoNPhGkcB6RBawbdy3NJ5pjiy?usp=sharing
+
 # Danh sách nhãn và giá của các loại sản phẩm
 prices = {
     'ca_hu_kho': 35000, 'canh_bi_do': 40000, 'canh_bi_xanh': 30000, 'canh_cai': 20000,
@@ -25,6 +26,45 @@ prices = {
     'rau_muong_xao': 20000, 'thit_kho': 25000, 'thit_kho_trung': 25000,
     'tom_kho': 25000, 'trung-chien': 25000, 'xi_dau': 50
 }
+
+# Phát âm thanh và giao diện
+def play_click():
+    threading.Thread(target=lambda: playsound("pict/click.mp3"), daemon=True).start()
+
+def play_background_music():
+    try:
+        pygame.mixer.init()
+        pygame.mixer.music.load("pict/nhạc nền.mp3")
+        pygame.mixer.music.set_volume(0.3)
+        pygame.mixer.music.play(-1)  # Lặp vô hạn
+    except Exception as e:
+        print("Lỗi phát nhạc nền:", e)
+
+def smart_background(path, screen_w, screen_h, bg_color="white"):
+    img = Image.open(path)
+    if img.width >= screen_w or img.height >= screen_h:
+        return ImageOps.fit(img, (screen_w, screen_h), method=Image.Resampling.LANCZOS)
+    else:
+        return ImageOps.pad(img, (screen_w, screen_h),
+                            method=Image.Resampling.LANCZOS,
+                            color=bg_color, centering=(0.5, 0.5))
+
+class WelcomeScreen(tk.Frame):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+        self.controller = controller
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
+        bg_img = smart_background("pict/d.png", screen_w, screen_h)
+
+        self.bg_photo = ImageTk.PhotoImage(bg_img)
+        tk.Label(self, image=self.bg_photo).place(x=0, y=0, relwidth=1, relheight=1)
+
+        tk.Button(self, text="PRESS HERE", font=("Arial", 20, "bold"),
+                  bg="green", fg="white", width=12,
+                  command=lambda: [play_click(), controller.show_frame("FoodGUI")])\
+            .place(relx=0.42, rely=0.76)
+
 
 # Lớp chính điều khiển giao diện và các thao tác xử lý (class FoodGUI)
 class FoodGUI:
@@ -161,6 +201,8 @@ class FoodGUI:
 
 # Hàm khởi tạo chạy chương trình (Tạo cửa sổ chính và khởi động GUI)
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = FoodGUI(root)
-    root.mainloop()
+    play_background_music()
+    app = App()
+    app.mainloop()
+    pygame.mixer.music.stop()
+    pygame.mixer.quit()
