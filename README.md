@@ -7,7 +7,7 @@ import cv2
 from main2 import yolo_model, cnn_model, food_labels, detect_and_crop_food, predict_food
 
 # Mô hình detect và drop + dataset 
-https://drive.google.com/file/d/1jpeuNHOTjRNuLJNSLxSF-jwale0tXIxo/view?usp=sharing    
+# https://drive.google.com/file/d/1jpeuNHOTjRNuLJNSLxSF-jwale0tXIxo/view?usp=sharing    
 
 # Danh sách nhãn và giá của các loại sản phẩm
 prices = {
